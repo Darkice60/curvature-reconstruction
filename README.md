@@ -1,18 +1,16 @@
 # curvature-reconstruction
-A numerical exploration of approximating smooth functions by utilizing osculating circles, with comparisons to Taylor polynomials, approximation error, arc length, and line integrals.
+A numerical exploration of approximating arc length and line integrals with osculating circles.
 
 ## Purpose
-Common local approximations of functions are done utilizing linear approximations or taylor polynomials. 
-> This project expores the possibility of smooth function being reconstructed by continuously approximating its local behavior using osculating circles.
+This project explores arc length approximations and compares with the base integral approximated with a midpoint Riemann sum.
+It also seeks to compare approximated regular and line integrals.
 
 ## Objective
 
-- Approximate a function on a specified domain by using osculating circles from numerically estimated curvature
-- Compare the approximation against Taylor polynomials and line segments
-- Analyze approximation error
 - Compare numerical integrals estimates
 - Compare calculated arc lengths
 - Investigate line integrals along the approximated curve
+- Analyze approximation error
 
 ## Mathematics
 
@@ -25,7 +23,7 @@ Please refer to (LaTex doc)
 
 ## Current Status
 
-Just begun.
+Arc length calculation completed, formatting for cleanliness and readability.
 
 ## License
 
