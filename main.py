@@ -1,113 +1,66 @@
 import math
 import cmath
+import arc_length
+import line_integrals
 #import matplotlib
 
-#Ask user for function and define it
 
-def f(x):
-    return eval(func_string, {"x": x, "math": math, "cmath": cmath})
+choice = input("Choose Calculation:\nArc Length - 1\nPlaner Scaler Line Intergrals - 2")
 
-def first_derivative(f, x, h=1e-20):
-    return f(x+1j*h).imag/h
+if (choice == 1):
+    func_string = input("Enter function of x (as python code, MUST USE cmath for special functions):")
+    f = arc_length.create_func(func_string)
 
-def second_derivative(f, x, h=1e-5):
-    return 2*(f(x).real-f(x+1j*h).real)/h**2
+    x_i = eval(input("Enter the start of the interval: "), {"math": math, "cmath": cmath})
+    x_f = eval(input("Enter the end of the interval: "), {"math": math, "cmath": cmath})
 
-def curvature(f, x):
-    return ((second_derivative(f,x))/((1+(first_derivative(f,x))**2)**(1.5)))
+    h_values = [
+        1e-1,
+        5e-2,
+        1e-2,
+        5e-3,
+        1.5e-3,
+        1.2e-3,
+        1e-3,
+        9e-4,
+        8e-4,
+        7e-4,
+        6e-4,
+        5e-4,
+        1e-4
+    ]
 
-def circle_geo(f,x):
-    y = f(x).real
-    f1 = float(first_derivative(f,x))
-    f2 = float(second_derivative(f,x))
+    print("StepSize\tCircleVal\t\tLineVal\t\t\tTrueVal\t\t\tCLD\t\t\tCTE\t\t\tLTE")
 
-    if (abs(f2) < 1e-10):
-        return {
-                "point": (x, y),
-                "center": None,
-                "radius": math.inf,
-                }
+    for h in h_values:
+        result = arc_length.results(f, func_string, x_i, x_f, h)
+        print(f'{(result["step"])}\t\t{result["circ"]:.12f}\t\t{result["line"]:.12f}\t\t{result["true"]:.12f}\t\t{result["cld"]:.12e}\t{result["cte"]:.12e}\t{result["lte"]:.12e}')
+elif (choice == 2):
+    func_string = input("Enter planer line as a function of x (as python code, MUST USE cmath for special functions):")
+    f = line_integrals.create_func(func_string)
+    func2_string = func_string = input("Enter function of x and y (as python code, MUST USE cmath for special functions):")
+    g = line_integrals.create_func(func_string)
+    x_i = eval(input("Enter the start of the interval: "), {"math": math, "cmath": cmath})
+    x_f = eval(input("Enter the end of the interval: "), {"math": math, "cmath": cmath})
+    
+    h_values = [
+        1e-1,
+        5e-2,
+        1e-2,
+        5e-3,
+        1.5e-3,
+        1.2e-3,
+        1e-3,
+        9e-4,
+        8e-4,
+        7e-4,
+        6e-4,
+        5e-4,
+        1e-4
+    ]
 
-    cx = x - f1 * (1+f1**2)/f2
-    cy = y + (1+f1**2)/f2
+    print("StepSize\tCircleVal\t\tLineVal\t\t\tTrueVal\t\t\tCLD\t\t\tCTE\t\t\tLTE")
 
-    r = abs((((1+(f1)**2)**(1.5))/(f2)))
-
-    return {
-        "point": (x, y),
-        "center": (cx, cy),
-        "radius": r,
-        }
-
-def angle_find(cx, x, cy, h):
-    ux = (x-h) - cx
-    uy = f(x-h).real - cy
-
-    vx = (x+h) - cx
-    vy = f(x+h).real - cy
-
-    cross = ux * vy - uy * vx
-    dot = ux * vx + uy * vy
-
-    ang = math.atan2(abs(cross), dot)
-
-    return ang
-
-def circle_arc_length_approx(f, x_i, x_f, h=1e-4):
-    n = math.ceil((x_f-x_i)/(2*h))
-    dx = (x_f-x_i) / n
-    l = 0
-    for i in range(n):
-        x = x_i + (i +0.5)*dx
-        circle = circle_geo(f,x)
-        if circle["center"] is None:
-            x1 = x - dx/2
-            x2 = x + dx/2
-
-            y1 = f(x - dx/2).real
-            y2 = f(x + dx/2).real
-
-            length = math.sqrt((x1-x2)**2 + (y1-y2)**2)
-
-            l += length
-            continue
-        x, y = circle["point"]
-        cx, cy = circle["center"]
-        r = circle["radius"]
-        ang = angle_find(cx, x, cy, dx/2)
-        l += r*ang
-
-    return l
-
-def trad_arc_length_approx(f, x_i, x_f, h=1e-4):
-    n = math.ceil((x_f-x_i)/(2*h))
-    dx = (x_f-x_i) / n
-    l = 0
-    for i in range(n):
-        x = x_i + (i +0.5)*dx
-        l_func = math.sqrt(1+(first_derivative(f,x))**2)
-        l += l_func * dx
-    return l
-
-func_string = input("Enter function (as python code, MUST USE cmath for special functions):")
-h_values = [
-    1e-1,
-    5e-2,
-    1e-2,
-    5e-3,
-    1.5e-3,
-    1.25e-3,
-    1e-3,
-    9e-4,
-    8e-4,
-    7e-4,
-    6e-4,
-    5e-4,
-    1e-4
-]
-for h in h_values:
-    print(h)
-    print(func_string)
-    print(circle_arc_length_approx(f, 0, 2, h))
-    print(trad_arc_length_approx(f, 0, 2, h))
-    print("\n")
+    for h in h_values:
+        result = arc_length.results(f, func_string, x_i, x_f, h)
+        print(f'{(result["step"])}\t\t{result["circ"]:.12f}\t\t{result["line"]:.12f}\t\t{result["true"]:.12f}\t\t{result["cld"]:.12e}\t{result["cte"]:.12e}\t{result["lte"]:.12e}')

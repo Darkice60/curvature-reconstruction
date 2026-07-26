@@ -20,6 +20,7 @@ Please refer to (LaTex doc)
 
 - Python
 - Matplotlib
+- Mpmath
 
 ## Current Status
 
