@@ -67,7 +67,7 @@ def circle_arc_length_approx(f, x_i, x_f, h=1e-4):
             y1 = f(x - dx/2).real
             y2 = f(x + dx/2).real
 
-            length = math.sqrt((x1-x2)**2 + (y1-y2)**2)
+            length = math.hypot((x1-x2), (y1-y2))
 
             l += length
             continue
