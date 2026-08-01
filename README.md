@@ -31,7 +31,7 @@ LTE stands for Line-True Error.
 
 ## Mathematics
 
-Please refer to (LaTex doc)
+Please refer to [Curvature Reconstruction Analysis](report/Curvature_Reconstruction_Analysis.pdf)
 
 ## Dependencies
 

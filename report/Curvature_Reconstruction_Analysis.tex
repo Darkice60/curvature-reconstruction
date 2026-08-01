@@ -1,0 +1,314 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+
+\title{Curvature Reconstruction Analysis}
+\author{DarkIce60}
+\date{July 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This project investigates a simple question. Instead of using line segments to approximate arc length and line integrals, could one utilize arcs of local osculating circles to have greater accuracy? This is not a new concept, however I wished to explore the topic and below are my results. The overall observations were that the arc length calculations converged faster to the true value at a rate of $O(h^4)$ vs. $O(h^2)$, while for line integrals, they both converged to the true value at a rate of $O(h^2)$ as the scalar field approximation appears to be the dominant source of error.
+\end{abstract}
+
+\section{The Method of Osculating Circles}
+These expressions follow from the Frenet frame and the classical formulas for the curvature of a graph $y= f(x)$.
+
+The curvature of the graph $y=f(x)$ is:
+\[
+\kappa(x) = \frac{|f''(x)|}{(1+[f'(x)]^2)^\frac{3}{2}}
+\]
+And from this curvature the \textbf{radius} of the osculating circle at $x$ is equal to
+\[
+R(x)= \frac{1}{\kappa(x)} =  \frac{(1+[f'(x)]^2)^\frac{3}{2}}{|f''(x)|}
+\]
+
+The centre of the osculating circle $(C_x, C_y)$ is determined by the equations
+
+\begin{gather*}
+C_x(x) = x - \frac{f'(x)(1+[f'(x)]^2)}{f''(x)} \\
+C_y(x) = f(x) + \frac{(1+[f'(x)]^2)}{f''(x)}
+\end{gather*}
+
+From here one can use the formula $s = r\theta$ to represent a small arc from an osculating circle. An approximation to the central angle, $\theta$, can be obtained by taking a value, $h$, and approximating vectors from the centre of the circle to $(x-h,f(x-h))$ and $(x+h, f(x+h)$. Of course these points are on the curve, not the actual osculating circle; however, the osculating circle and the curve's position, tangent, and curvature at the point of tangency agree at $x$, meaning that over a sufficiently small interval ($[x-h, x+h]$) the osculating circle provides a highly accurate local geometric approximation and that the points on the curve are an accurate approximation of the corresponding points on the osculating circle. After this one can use dot products and lengths to find the angle, that being
+\[
+\theta = \arccos(\frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|\|\mathbf{v}\|})
+\]
+
+However, in actual computing, this can create inaccuracies due to floating-point error when evaluating $\arccos$, as numerically evaluating with nearly parallel vectors becomes difficult as the argument of $\arccos$ approaches $\pm1$. So one can use the $\operatorname{atan2}(y,x)$ function with the first argument as the 2 dimensional scalar cross product and the second as the dot product between the 2 vectors as a more stable alternative. The expression is
+\[
+\theta = \operatorname{atan2}(|\mathbf{u} \times \mathbf{v}|,\mathbf{u} \cdot \mathbf{v})
+\]
+
+where $|\mathbf{u} \times \mathbf{v}| = |u_xv_y-u_yv_x|$
+
+Now, to approximate the arc length on an interval $[x_i, x_f]$, let us take a value on the interval, called $x$. We can take a predetermined step size $h$, and use the points $(C_x, C_y), (x-h, f(x-h)),$ and $(x+h, f(x+h))$ to create vectors $\mathbf{u} = \langle(x-h)-C_x, f(x-h)-C_y\rangle$ and $\mathbf{v} = \langle(x+h)-C_x, f(x+h)-C_y\rangle$. With these vectors and the $\operatorname{atan2}$ formula, one can determine a $\theta$ between the two vectors; combined with the radius of curvature at $x, R(x)$, an arc length near $x$ can be determined. If we continue doing this along the curve we see:
+\[
+L \approx \sum_{i=1}^{n} R_i^*\theta_i^* = \sum_{i=1}^{n} R(x_i^*)\operatorname{atan2}(|\mathbf{u} \times \mathbf{v}|,\mathbf{u} \cdot \mathbf{v})
+\]
+
+where $\mathbf{u} = \langle(x_i^*-h)-C_x(x_i^*), f(x_i^*-h)-C_y(x_i^*)\rangle$ 
+and $\mathbf{v} = \langle(x_i^*+h)-C_x(x_i^*), f(x_i^*+h)-C_y(x_i^*)\rangle$.
+In practice, the interval is partitioned into sub-intervals of equal width, and the midpoint of each sub-interval is used as the point of tangency for the corresponding osculating circle.
+
+This method is compared to the arc length integral's midpoint Riemann sum approximation of
+\[
+\int_a^b\sqrt{1+[f'(x)]^2}\,dx = \lim_{n \to \infty}\sum_{i=1}^{n} \sqrt{1+[f'(x_i^*)]^2}\,\Delta x\approx \sum_{i=1}^{n} \sqrt{1+[f'(x_i^*)]^2}\,\Delta x
+\]
+
+Furthermore we can apply this line of logic to a line integral of the form:
+\[
+\int_C f(x,y)ds
+\]
+Where $C$ is a planar curve of the form $\mathbf{r}(t) = \langle x(t),y(t)\rangle$ and $ds = \sqrt{(\frac{dx}{dt})^2+(\frac{dy}{dt})^2}\,dt$.
+
+A similar construction can be applied to scalar line integrals by considering that the line integral on $C$ is simply a Riemann sum of $f(x(t),y(t))$ with respect to $ds$, which we can approximate by osculating circles:
+
+\begin{gather*}
+\int_C f(x,y)ds = \lim_{n \to \infty} \sum_{i=1}^{n}f(x(t_i^*),y(t_i^*))\sqrt{[x'(t_i^*)]^2+[y'(t_i^*)]^2}\,\Delta t \\
+\approx \sum_{i=1}^{n}f(x(t_i^*),y(t_i^*))R_i^*\theta_i^* = \sum_{i=1}^{n}f(x(t_i^*),y(t_i^*))R(t_i^*)\operatorname{atan2}(|\mathbf{u} \times \mathbf{v}|,\mathbf{u} \cdot \mathbf{v})
+\end{gather*}
+
+The geometric information for the osculating circles is described by the following equations, stating the curvature, radius, and centre of the circle respectively:
+\begin{gather*}
+\kappa(t) = \frac{|(x'(t))(y''(t))-(x''(t))(y'(t))|}{((x'(t))^2+(y'(t))^2)^\frac{3}{2}} \\
+R(t) = \frac{1}{\kappa(t)} = \frac{((x'(t))^2+(y'(t))^2)^\frac{3}{2}}{|(x'(t))(y''(t))-(x''(t))(y'(t))|} \\
+C_x(t) = x(t) - \frac{(y'(t))(((x'(t))^2+(y'(t))^2))}{(x'(t))(y''(t))-(x''(t))(y'(t))} \\
+C_y(t) = y(t) + \frac{(x'(t))(((x'(t))^2+(y'(t))^2))}{(x'(t))(y''(t))-(x''(t))(y'(t))}
+\end{gather*}
+
+A fallback procedure is used when the radius of the osculating circle tends to infinity. In this scenario, a line segment's length from the point $(x-h,f(x-h))$ to $(x+h, f(x+h))$ [or $(x(t-h),y(x-h))$ to $(x(t+h),y(x+h))$ for line integrals] is used to continue the approximation.
+
+All local geometric quantities are evaluated at the midpoint of each partition interval.
+
+\newpage
+
+\section{Coding}
+
+The actual python program that was utilized for this project did all of the above approximations numerically. However, this numerical implementation introduces several practical limitations.
+
+\subsection{Derivatives}
+
+The program uses \textbf{complex-step differentiation}, allowing for highly precise values of the 1st derivative of a function, and allowing an $h$ many orders of magnitude smaller than would be practical with finite-difference formulas, circumventing the subtraction of two nearly equal numbers in the numerator, which can lead to catastrophic cancellation. An $h$ value of $10^{-30}$ is used.
+This formula is derived from the Taylor expansion of a function $f(x+ih)$ about $x$, where $i$ is the imaginary unit. 
+\[
+f(x+ih)=f(x)+ihf'(x)-\frac{h^2}{2!}f''(x)-i\frac{h^3}{3!}f'''(x) + \frac{h^4}{4!}f^{(4)}(x) + O(h^5) 
+\]
+
+The approximation for the first derivative is:
+\[
+f'(x) \approx \frac{\Im(f(x+ih))}{h}
+\]
+And for the second derivative:
+\[
+f''(x) \approx \frac{2(f(x)-\Re[f(x+ih)])}{h^2}
+\]
+For the second derivative however, the subtraction of two nearly equal numbers in the numerator can result in catastrophic cancellation. Consequently, an $h$ value of $10^{-5}$ is used for the second derivative.
+
+Due to the usage of these derivatives, $f$ must be an analytic function to allow the use of these approximations.
+
+\subsection{Validation}
+
+To assess the accuracy of both approximation methods, reference values were computed using the mpmath library with a precision of 80 decimal places. Arc lengths and line integrals were evaluated using an adaptive numerical quadrature, allowing the approximations to be measured against a high-precision numerical solution.
+
+\subsection{Abbreviations}
+The remainder of this paper and the accompanying program make frequent use of three abbreviations:
+\begin{itemize}
+\item CLD: Circle-Line Difference.
+\item CTE: Circle-True Value Error.
+\item LTE: Line-True Value Error.
+\end{itemize}
+The CLD represents the difference between the osculating circle and line segment approximation for the same step value, $h$.
+The CTE represents the error between the osculating circle approximation for step value, $h$, and the true value to 80 decimal places.
+The LTE represents the error between the line segment approximation for step value, $h$, and the true value to 80 decimal places.
+
+The formulas for these values are as follows, where $V$ represents a value from a method:
+\begin{gather*}
+\mathrm{CLD} = |V_{Circle}-V_{Line}| \\
+\mathrm{CTE} = |V_{Circle}-V_{True}| \\
+\mathrm{LTE} = |V_{Line}-V_{True}|
+\end{gather*}
+
+\newpage
+
+\section{Results}
+
+Shown below are 5 sample calculations that will be used in analysis. If you wish to try your own functions, please check the attached repository.
+\\
+
+For the arc length of $f(x)=x^2$ where $x\in[0,2]$:
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrrrr}
+\hline
+$h$ & Circle & Line & CLD & CTE & LTE\\
+\hline
+$10^{-1}$ & $4.646735973272$ & $4.643549801240$ & $3.186\times10^{-3}$ & $4.779\times10^{-5}$ & $3.234\times10^{-3}$\\
+$5\times10^{-2}$ & $4.646780776845$ & $4.645975300569$ & $8.055\times10^{-4}$ & $2.986\times10^{-6}$ & $8.085\times10^{-4}$\\
+$10^{-2}$ & $4.646783757656$ & $4.646751424334$ & $3.233\times10^{-5}$ & $4.777\times10^{-9}$ & $3.234\times10^{-5}$\\
+$5\times10^{-3}$ & $4.646783762134$ & $4.646775677911$ & $8.084\times10^{-6}$ & $2.988\times10^{-10}$ & $8.085\times10^{-6}$\\
+$10^{-3}$ & $4.646783762432$ & $4.646783439052$ & $3.234\times10^{-7}$ & $8.237\times10^{-13}$ & $3.234\times10^{-7}$\\
+$5\times10^{-4}$ & $4.646783762432$ & $4.646783681588$ & $8.084\times10^{-8}$ & $4.551\times10^{-13}$ & $8.085\times10^{-8}$\\
+$10^{-4}$ & $4.646783762432$ & $4.646783759199$ & $3.233\times10^{-9}$ & $6.469\times10^{-13}$ & $3.234\times10^{-9}$\\
+\hline
+\end{tabular}
+\caption{True value: $4.646783762433$.}
+\end{table}
+\\
+
+For the arc length of $f(x)=e^x$ where $x\in[0,2]$:
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrrrr}
+\hline
+$h$ & Circle & Line & CLD & CTE & LTE\\
+\hline
+$10^{-1}$ & $6.788643734041$ & $6.777637702094$ & $1.101\times10^{-2}$ & $7.466\times10^{-6}$ & $1.101\times10^{-2}$\\
+$5\times10^{-2}$ & $6.788650735917$ & $6.785895608318$ & $2.755\times10^{-3}$ & $4.645\times10^{-7}$ & $2.756\times10^{-3}$\\
+$10^{-2}$ & $6.788651199653$ & $6.788540948292$ & $1.103\times10^{-4}$ & $7.421\times10^{-10}$ & $1.103\times10^{-4}$\\
+$5\times10^{-3}$ & $6.788651200348$ & $6.788623637147$ & $2.756\times10^{-5}$ & $4.683\times10^{-11}$ & $2.756\times10^{-5}$\\
+$10^{-3}$ & $6.788651200394$ & $6.788650097862$ & $1.103\times10^{-6}$ & $6.162\times10^{-13}$ & $1.103\times10^{-6}$\\
+$5\times10^{-4}$ & $6.788651200394$ & $6.788650924762$ & $2.756\times10^{-7}$ & $6.873\times10^{-13}$ & $2.756\times10^{-7}$\\
+$10^{-4}$ & $6.788651200394$ & $6.788651189369$ & $1.102\times10^{-8}$ & $9.217\times10^{-13}$ & $1.103\times10^{-8}$\\
+\hline
+\end{tabular}
+\caption{True value: $6.788651200395$.}
+\end{table}
+\\
+
+For the arc length of $f(x)=\sin(x)$ where $x\in[0,\pi]$:
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrrrr}
+\hline
+$h$ & Circle & Line & CLD & CTE & LTE\\
+\hline
+$10^{-1}$ & $3.820188593143$ & $3.820197789028$ & $9.196\times10^{-6}$ & $9.196\times10^{-6}$ & $1.871\times10^{-14}$\\
+$5\times10^{-2}$ & $3.820197213292$ & $3.820197789028$ & $5.757\times10^{-7}$ & $5.757\times10^{-7}$ & $3.900\times10^{-16}$\\
+$10^{-2}$ & $3.820197788055$ & $3.820197789028$ & $9.725\times10^{-10}$ & $9.725\times10^{-10}$ & $3.900\times10^{-16}$\\
+$5\times10^{-3}$ & $3.820197788966$ & $3.820197789028$ & $6.201\times10^{-11}$ & $6.201\times10^{-11}$ & $3.499\times10^{-15}$\\
+$10^{-3}$ & $3.820197789028$ & $3.820197789028$ & $3.855\times10^{-13}$ & $3.837\times10^{-13}$ & $1.722\times10^{-15}$\\
+$5\times10^{-4}$ & $3.820197789029$ & $3.820197789028$ & $9.126\times10^{-13}$ & $9.047\times10^{-13}$ & $7.940\times10^{-15}$\\
+$10^{-4}$ & $3.820197789024$ & $3.820197789028$ & $3.312\times10^{-12}$ & $3.299\times10^{-12}$ & $1.382\times10^{-14}$\\
+\hline
+\end{tabular}
+\caption{True value: $3.820197789028$.}
+\end{table}
+
+\newpage
+
+For the line integral $\int_{C}ds$ on $\mathbf{r}(t)=\langle t, t^2\rangle$ where $t\in[0,2]$
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrrrr}
+\hline
+$h$ & Circle & Line & CLD & CTE & LTE\\
+\hline
+$10^{-1}$ & $4.646735973272$ & $4.643549801240$ & $3.186\times10^{-3}$ & $4.779\times10^{-5}$ & $3.234\times10^{-3}$\\
+$5\times10^{-2}$ & $4.646780776845$ & $4.645975300569$ & $8.055\times10^{-4}$ & $2.986\times10^{-6}$ & $8.085\times10^{-4}$\\
+$10^{-2}$ & $4.646783757656$ & $4.646751424334$ & $3.233\times10^{-5}$ & $4.777\times10^{-9}$ & $3.234\times10^{-5}$\\
+$5\times10^{-3}$ & $4.646783762134$ & $4.646775677911$ & $8.084\times10^{-6}$ & $2.988\times10^{-10}$ & $8.085\times10^{-6}$\\
+$10^{-3}$ & $4.646783762432$ & $4.646783439052$ & $3.234\times10^{-7}$ & $8.237\times10^{-13}$ & $3.234\times10^{-7}$\\
+$5\times10^{-4}$ & $4.646783762432$ & $4.646783681588$ & $8.084\times10^{-8}$ & $4.551\times10^{-13}$ & $8.085\times10^{-8}$\\
+$10^{-4}$ & $4.646783762432$ & $4.646783759199$ & $3.233\times10^{-9}$ & $6.469\times10^{-13}$ & $3.234\times10^{-9}$\\
+\hline
+\end{tabular}
+\caption{True value: $4.646783762433$.}
+\end{table}
+\\
+
+For the line integral $\int_{C}e^{x+y}ds$ on $\mathbf{r}(t)=\langle t, t^2\rangle$ where $t\in[0,2]$
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrrrr}
+\hline
+$h$ & Circle & Line & CLD & CTE & LTE\\
+\hline
+$10^{-1}$ & $311.480431343911$ & $311.462871880750$ & $1.756\times10^{-2}$ & $1.455\times10^{1}$ & $1.457\times10^{1}$\\
+$5\times10^{-2}$ & $322.280595442176$ & $322.276139458946$ & $4.456\times10^{-3}$ & $3.748\times10^{0}$ & $3.752\times10^{0}$\\
+$10^{-2}$ & $325.877201797380$ & $325.877022696859$ & $1.791\times10^{-4}$ & $1.514\times10^{-1}$ & $1.516\times10^{-1}$\\
+$5\times10^{-3}$ & $325.990742201295$ & $325.990697419411$ & $4.478\times10^{-5}$ & $3.786\times10^{-2}$ & $3.791\times10^{-2}$\\
+$10^{-3}$ & $326.027089967948$ & $326.027088176621$ & $1.791\times10^{-6}$ & $1.515\times10^{-3}$ & $1.516\times10^{-3}$\\
+$5\times10^{-4}$ & $326.028225951636$ & $326.028225503819$ & $4.478\times10^{-7}$ & $3.787\times10^{-4}$ & $3.791\times10^{-4}$\\
+$10^{-4}$ & $326.028589467888$ & $326.028589450009$ & $1.788\times10^{-8}$ & $1.515\times10^{-5}$ & $1.516\times10^{-5}$\\
+\hline
+\end{tabular}
+\caption{True value: $326.028604614449$.}
+\end{table}
+
+\newpage
+
+\section{Analysis}
+\subsection{Arc Length}
+\label{subsec:arc_length}
+\subsubsection{$x^2$ and $e^x$}
+(See \textbf{Table 1} and \textbf{Table 2})
+
+For both $f(x)=x^2$ and $f(x)=e^x$, the osculating circle approximation produces smaller errors than the line segment approximation. The LTE decreases approximately quadratically by step size, whilst the CTE decrease approximately quartically. Decreasing $h$ by one order of magnitude decreases the LTE by roughly two orders of magnitude, whereas the CTE decreases by roughly four orders of magnitude. These two functions have differing, but nonzero curvatures, yet still have consistent convergence to the true value at the observed orders. This is consistent at all tested step sizes, suggesting that the osculating circle method is generally more accurate for these examples.
+
+\subsubsection{$\sin(x)$}
+(See \textbf{Table 3})
+
+For $f(x) = \sin(x)$, the line segment approximation lands on machine precision with the largest tested step size ($h = 10^{-1}$), while the circle approximation does not even reach the level of accuracy of the line segment approximation. This may be due to the actual integral that the line segment method approximates:
+\[
+\int_{0}^{\pi}\sqrt{1+\cos^2(x)}\,dx
+\]
+Which is symmetric about $\frac{\pi}{2}$ since the integrand and interval are symmetric there. The midpoint rule admits an asymptotic error expansion of the form:
+\[
+E_M(h)=C_2h^2+C_4h^4+C_6h^6+ ... = \sum_{k=1}^\infty C_{2k}h^{2k}
+\]
+Many of these terms appear to cancel favourably due to the aforementioned symmetry, suggesting why they create a highly accurate approximation. The osculating circle method meanwhile, performs multiple floating-point calculations involving curvature, circle centres, and angles, rather than having this favourable cancellation. This highlights that the osculating circle approximation is not universally superior; its advantages are most apparent when the line segment approximation does not benefit from favourable symmetry.
+
+Once the approximations reach machine precision further refinement of the step size cannot significantly reduce the numerical error, but in fact the floating-point round-off error increases overall error as observed from \textbf{Table 3}.
+
+\subsection{Line Integrals}
+\subsubsection{$\int_{C}ds$ on $\mathbf{r}(t)=\langle t, t^2\rangle$}
+(See \textbf{Table 4})
+
+The line integral $\int_{C}ds$ where $C$ is the planar curve $\mathbf{r}(t)=\langle t, t^2\rangle$ is equivalent to to the arc length of $f(x)=x^2$ where $x\in[0,2]$. Hence, the numerical results in \textbf{Table 4} are equivalent to those in \textbf{Table 1}. This is a validation of the implementation of the line integral algorithm, demonstrating that when the scalar field is constant ($f(x,y)=1$), the line integral correctly reduces to the arc length computation and reproduces the same convergence behaviour.
+\subsubsection{$\int_{C}e^{x+y}ds$ on $\mathbf{r}(t)=\langle t, t^2\rangle$}
+(See \textbf{Table 5})
+
+In this scenario, our scalar field $f(x,y)$ is no longer a constant. This introduces approximation error in \textit{both} $ds$ and the field $e^{x+y}$. This can be seen through \textbf{Table 5}, the order of error between the CTE and LTE is equivalent at all step sizes, and the error decreases at a quadratic rate for both methods. This suggests that the quadrature error in approximating the scalar field $e^{x+y}$ dominates, reducing the effect of improvements that increasing the accuracy of $ds$ may have. This is further emphasized by the actual CTE and LTE values. Since from \ref{subsec:arc_length}, it is observed that the osculating circle method has a better approximation of arc length, the actual CTE is lower than the LTE for this line integral, implying that the osculating circle method consistently produces slightly smaller errors, however the approximation error from the scalar may dominate.
+\newpage
+
+\section{Rough Logic}
+This section is \textbf{not} about proving my methods, it is simply to provide intuition (roughly). This is \textbf{not} a formal proof.
+\subsection{Arc Length}
+\label{subsec:arc_length_logic}
+Consider a smooth curve expanded about a midpoint $x$:
+\[
+f(x+h) = f(x) + hf'(x) + \frac{h^2}{2!}f''(x) + \frac{h^3}{3!}f'''(x) + \frac{h^4}{4!}f^{(4)}(x) + ...
+\]
+
+A line segment only uses the point and tangent information of the curve, so terms describing the curve's local bending, are not used. This indicates that the curve bows away from the chord by roughly $O(h^2)$. Integrating over one geometric panel yields $O(h^3)$, then with $n \approx \frac{1}{h}$ sub-intervals:
+\begin{gather*}
+O(h^3) \cdot O(\frac{1}{h}) = O(h^2)
+\end{gather*}
+
+Now for the osculating circle, it matches the functions position, tangent, and curvature, so the local second-order behaviour of the curve is incorporated into the approximation. This suggests that the curve bows away from the circle by roughly $O(h^3)$. Since the points are approximately symmetric ($(x-h,f(x-h))$ to $(x+h, f(x+h))$) and the circle's arc is about $x$, the odd terms are expected to approximately cancel, hence indicating that the curve bows away from the circle by roughly $O(h^4)$. Integrating over one geometric panel yields $O(h^5)$, then with $n \approx \frac{1}{h}$ sub-intervals:
+\begin{gather*}
+O(h^5) \cdot O(\frac{1}{h}) = O(h^4)
+\end{gather*}
+
+Although this is not a proof, it provides intuition for why the numerical experiments consistently exhibit fourth-order convergence for the osculating circle method.
+
+\subsection{Line Integrals}
+From the line of logic in \ref{subsec:arc_length_logic}, it can be seen that the midpoint approximation for the actual scalar field $f(x,y)$ in the line integral $\int_{C}f(x,y)\,ds$ roughly has local truncation error of the third order $O(h^3)$, corresponding to an overall error of $O(h^2)$ after summing over all sub-intervals. (since it computed by a midpoint Riemann sum approximation). So no matter the increased accuracy from $ds$, it is expected that the scalar field's approximation error will dominate. Hence both methods are expected to exhibit overall second-order convergence.
+
+\newpage
+
+\section{Conclusion}
+This project investigated the use of local osculating circles as an alternative to traditional line segment approximations for computing arc lengths and scalar line integrals. By replacing each local line segment with an arc of the corresponding osculating circle, additional geometric information about the curve, mainly its local curvature, was incorporated into the approximation. For arc length calculations where the line segment method did not benefit from symmetry, an experimentally observed fourth order convergence rate was consistently observed from the osculating circle method against the second order convergence of the line segment method. For line integral calculations, the scalar field's approximation error from the midpoint rule seemingly dominated, possibly reducing the geometric improvement of the differential $ds$.
+
+Overall, these results show how incorporating local geometric information can significantly improve the approximation of quantities such as arc length. However numerical error in other approximations, such as quadrature error for scalar line integrals, may have lead to geometric improvements having a much smaller effect.
+
+\vfill
+\begin{center}
+\small
+Typeset using \LaTeX.
+\end{center}
+\end{document}
