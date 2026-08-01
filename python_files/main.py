@@ -16,7 +16,7 @@ import arc_length
 import line_integrals
 
 #ask user for choice
-choice = int(input("Choose Calculation:\nArc Length - 1\nPlaner Scalar Line Intergrals - 2\n"))
+choice = int(input("Choose Calculation:\nArc Length - 1\nPlaner Scalar Line Integrals - 2\n"))
 
 ## init list of h-values (step size/2)
 h_values = [
