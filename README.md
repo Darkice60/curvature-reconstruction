@@ -40,6 +40,11 @@ Please refer to [Curvature Reconstruction Analysis](report/Curvature_Reconstruct
 
 The implementation is restricted to sufficiently smooth curves, since the method relies on first- and second-order derivative information.
 
+## Desmos Links
+These links are helpful to the visualize the method.
+<https://www.desmos.com/calculator/ljdymzw4xv>
+<http://desmos.com/calculator/ewwx2czkn4>
+
 ## Current Status
 
 Project complete. No further updates.
